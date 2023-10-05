@@ -1,0 +1,6 @@
+requests
+beautifulsoup4
+pandas
+numpy
+Jinja2
+fire
