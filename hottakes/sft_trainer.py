@@ -18,7 +18,6 @@ from typing import Optional
 import uuid
 
 import torch
-from accelerate import Accelerator
 import mlflow
 from datasets import load_dataset
 from peft import LoraConfig
@@ -46,7 +45,7 @@ class ScriptArguments:
     log_with: Optional[str] = field(default="none", metadata={"help": "use 'wandb' to log with wandb"})
     learning_rate: Optional[float] = field(default=1.41e-5, metadata={"help": "the learning rate"})
     batch_size: Optional[int] = field(default=64, metadata={"help": "the batch size"})
-    seq_length: Optional[int] = field(default=4096, metadata={"help": "Input sequence length"})
+    seq_length: Optional[int] = field(default=512, metadata={"help": "Input sequence length"})
     gradient_accumulation_steps: Optional[int] = field(
         default=16, metadata={"help": "the number of gradient accumulation steps"}
     )
