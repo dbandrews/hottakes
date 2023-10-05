@@ -118,3 +118,6 @@ article_urls = [item for sublist in article_urls for item in sublist]
 article_urls = list(set(article_urls))
 article_urls
 # %%
+df = pd.DataFrame(article_urls)
+df.to_csv("article_urls.csv")
+# %%
