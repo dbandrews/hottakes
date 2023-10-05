@@ -45,7 +45,7 @@ def create_llama_2_dataset(
                     system_prompt=sys_prompt,
                     input_text=d[input_text_field],
                     desired_text=d[desired_text_field],
-                )
+                ).replace("\n", " ")
             }
         )
 
