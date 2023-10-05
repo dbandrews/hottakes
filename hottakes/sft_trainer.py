@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass, field
+import os
 from typing import Optional
 
 import torch
@@ -21,7 +22,7 @@ from datasets import load_dataset
 from peft import LoraConfig
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
-
+from transformers.integrations import MLflowCallback
 from trl import SFTTrainer
 
 
@@ -64,6 +65,9 @@ class ScriptArguments:
     save_total_limit: Optional[int] = field(default=10, metadata={"help": "Limits total number of checkpoints."})
     push_to_hub: Optional[bool] = field(default=False, metadata={"help": "Push the model to HF Hub"})
     hub_model_id: Optional[str] = field(default=None, metadata={"help": "The name of the model on HF Hub"})
+    mlflow_experiment_name: Optional[str] = field(default=None, metadata={"help": "The name of the MLflow experiment"})
+    mlflow_tracking_uri: Optional[str] = field(default=None, metadata={"help": "mlflow_tracking_uri"})
+    mlflow_run_name: Optional[str] = field(default=None, metadata={"help": "Name of the MLflow run"})
 
 
 parser = HfArgumentParser(ScriptArguments)
@@ -94,7 +98,10 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # Step 2: Load the dataset
-dataset = load_dataset(script_args.dataset_name, split="train")
+if "jsonl" in script_args.dataset_name:
+    dataset = load_dataset("json", data_files=script_args.dataset_name, split="train")
+else:
+    dataset = load_dataset(script_args.dataset_name, split="train")
 
 # Step 3: Define the training arguments
 training_args = TrainingArguments(
@@ -110,6 +117,7 @@ training_args = TrainingArguments(
     save_total_limit=script_args.save_total_limit,
     push_to_hub=script_args.push_to_hub,
     hub_model_id=script_args.hub_model_id,
+    run_name=script_args.mlflow_run_name,
 )
 
 # Step 4: Define the LoraConfig
@@ -124,11 +132,14 @@ else:
     peft_config = None
 
 # Step 5: Define the Trainer
+os.environ["MLFLOW_EXPERIMENT_NAME"] = script_args.mlflow_experiment_name
+os.environ["MLFLOW_TRACKING_URI"] = script_args.mlflow_tracking_uri
 trainer = SFTTrainer(
     model=model,
     args=training_args,
     max_seq_length=script_args.seq_length,
     train_dataset=dataset,
+    callbacks=[MLflowCallback()],
     dataset_text_field=script_args.dataset_text_field,
     peft_config=peft_config,
 )
