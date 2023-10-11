@@ -5,10 +5,19 @@ import re
 import pandas as pd
 import time
 from tqdm import tqdm
+import joblib
 
 # %%
+years = list(range(2023, 1999, -1))
+# years = list(range(2023, 2021, -1))
+years
 
+months = list(range(12, 0, -1))
+# months = list(range(12, 4, -1))
+months
 
+sleep_length = 0.1
+# %%
 def get_article_urls(catid, year, month):
     base_pink_bike_url = "https://www.pinkbike.com/news/archive/?"
 
@@ -40,7 +49,6 @@ def get_article_urls(catid, year, month):
 
     return filtered_urls
 
-
 # %%
 filtered_urls = get_article_urls(0, 2023, 10)
 print(len(filtered_urls))
@@ -68,10 +76,13 @@ def get_article_details(url):
     text = blog_section_inside.get_text()
 
     # Find the comments
-    comment_div = soup.find("div", id="comment_wrap")
-    top_comment_div = comment_div.find(class_="ppcont")
-    top_comment_text_div = top_comment_div.find(class_="comtext")
-    top_comment = top_comment_text_div.get_text(strip=True)
+    try:
+        comment_div = soup.find("div", id="comment_wrap")
+        top_comment_div = comment_div.find(class_="ppcont")
+        top_comment_text_div = top_comment_div.find(class_="comtext")
+        top_comment = top_comment_text_div.get_text(strip=True)
+    except:
+        top_comment = "N/A"
 
     dict = {
         "URL": url,
@@ -82,42 +93,53 @@ def get_article_details(url):
     }
     return dict
 
-
-# %%
-articles = []
-for url in filtered_urls[0:3]:
-    details = get_article_details(url)
-    articles.append(details)
-
-df = pd.DataFrame(articles)
-print(df)
-# %%
-articles
-# %%
-years = list(range(2023, 1999, -1))
-# years = list(range(2023, 2021, -1))
-years
-
-months = list(range(12, 0, -1))
-# months = list(range(12, 4, -1))
-months
 # %%
 article_urls = []
 for year in tqdm(years, desc="Years"):
     for month in months:
         article_urls.append(get_article_urls(0, year, month))
-        time.sleep(1)
+        time.sleep(sleep_length)
         # print(year)
         # print(month)
 
 len(article_urls)
 # %%
+# what does this do?
 article_urls = [item for sublist in article_urls for item in sublist]
 
 # %%
+# remove duplicates by converting to a set and back to a list
 article_urls = list(set(article_urls))
 article_urls
 # %%
 df = pd.DataFrame(article_urls)
-df.to_csv("article_urls.csv")
+# df.to_csv("article_urls.csv")
+# %%
+# Define the function you want to parallelize
+# def process_item(item):
+#     # Your processing logic for each item goes here
+#     result = item * 2
+#     return result
+
+# # Create a list of items to process
+# items = [1, 2, 3, 4, 5]
+
+# # Use joblib to parallelize the processing of items
+# results = joblib.Parallel(n_jobs=-1)(joblib.delayed(get_article_details)(item) for item in article_urls)
+
+# # Print the results
+# print(results)
+
+# %%
+articles = []
+# for url in filtered_urls[0:3]:
+for url in tqdm(article_urls):
+    details = get_article_details(url)
+    articles.append(details)
+    time.sleep(sleep_length)
+df = pd.DataFrame(articles)
+
+# %%
+df.to_csv("article_details.csv")
+print(df)
 # %%
