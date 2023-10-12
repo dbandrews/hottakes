@@ -3,9 +3,10 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
+import numpy as np
 import time
 from tqdm import tqdm
-import joblib
+from joblib import Parallel, delayed
 
 # %%
 years = list(range(2023, 1999, -1))
@@ -17,6 +18,8 @@ months = list(range(12, 0, -1))
 months
 
 sleep_length = 0.1
+
+
 # %%
 def get_article_urls(catid, year, month):
     base_pink_bike_url = "https://www.pinkbike.com/news/archive/?"
@@ -48,6 +51,7 @@ def get_article_urls(catid, year, month):
     filtered_urls = [url for url in article_url_list if re.match(pattern, url)]
 
     return filtered_urls
+
 
 # %%
 filtered_urls = get_article_urls(0, 2023, 10)
@@ -86,12 +90,13 @@ def get_article_details(url):
 
     dict = {
         "URL": url,
-        "Title": title,
+        "Title": str(title),
         "Description": description,
         "Article Text": text,
         "Top Comment Text": top_comment,
     }
     return dict
+
 
 # %%
 article_urls = []
@@ -125,21 +130,41 @@ df = pd.DataFrame(article_urls)
 # items = [1, 2, 3, 4, 5]
 
 # # Use joblib to parallelize the processing of items
-# results = joblib.Parallel(n_jobs=-1)(joblib.delayed(get_article_details)(item) for item in article_urls)
+# %%
+results = Parallel(n_jobs=-1)(delayed(get_article_details)(item) for item in article_urls[0:100])
 
 # # Print the results
 # print(results)
 
 # %%
+article_urls = pd.read_csv("article_urls.csv", index_col=None, names=["url"], header=0).url.to_list()
+article_urls
+
+# %%
 articles = []
-# for url in filtered_urls[0:3]:
-for url in tqdm(article_urls):
-    details = get_article_details(url)
-    articles.append(details)
-    time.sleep(sleep_length)
+n_jobs = 8
+url_chunks = np.array_split(article_urls, n_jobs)
+
+
+def get_article_details_parallel(url_chunk, job_num, sleep_length=1):
+    details = []
+    for url in tqdm(url_chunk, desc=f"Job {job_num}", position=job_num, leave=False):
+        details.append(get_article_details(url))
+        time.sleep(sleep_length)
+    return details
+
+
+results = Parallel(n_jobs=n_jobs)(
+    delayed(get_article_details_parallel)(url_chunk, job_num) for job_num, url_chunk in enumerate(url_chunks)
+)
+
 df = pd.DataFrame(articles)
 
 # %%
 df.to_csv("article_details.csv")
 print(df)
 # %%
+for k, v in get_article_details(article_urls[0]).items():
+    print(k, v)
+    print(type(k))
+    print(type(v))
