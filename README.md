@@ -4,7 +4,7 @@
 ## Setup
 
 ```bash
-conda create -n hottakes python=3.11
+conda create -n hottakes python=3.11 -y
 conda activate hottakes
 pip install -r requirements.txt
 pip install -e .
