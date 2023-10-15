@@ -132,6 +132,7 @@ def get_comment_votes(url):
             results.append(result)
         return results
 
+
 if __name__ == "__main__":
     # Settings
     years = list(range(2023, 1999, -1))
@@ -188,7 +189,7 @@ if __name__ == "__main__":
                 print(e)
             time.sleep(sleep_length)
         return details
-    
+
     results = Parallel(n_jobs=n_jobs)(
         delayed(get_comment_votes_parallel)(url_chunk, job_num) for job_num, url_chunk in enumerate(url_chunks)
     )
@@ -196,7 +197,7 @@ if __name__ == "__main__":
     results = [result for job_result in results for result in job_result if result]
     # Flatten list of lists
     results = [result for job_result in results for result in job_result]
-    
+
     with open("article_comments.json", "w") as f:
         json.dump(results, f)
 

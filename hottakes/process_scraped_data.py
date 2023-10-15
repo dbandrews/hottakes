@@ -13,7 +13,7 @@ LLAMA2_TEMPLATE = """
 def create_llama_2_dataset(
     file_path_in: str,
     file_path_out: str,
-    sys_prompt: str = "You're are a hilarious assistant, who tries to make the funniest comment about any text you are provided.",
+    sys_prompt: str = "You're a witty writer who is very knowledgeable about all bike topics. You always have a short, funny comment about any bike topic you are provided.",
     input_text_field: str = "text",
     desired_text_field: str = "comment",
 ):
@@ -28,7 +28,7 @@ def create_llama_2_dataset(
     file_path_out : str
         Path to save huggingface dataset to
     sys_prompt : str, optional
-        Instruction for the fine tuning, by default "You're are a hilarious assistant, who tries to make the funniest comment about any text you are provided."
+        Instruction for the fine tuning, by default "You're a witty writer who is very knowledgeable about all bike topics. You always have a short, funny comment about any bike topic you are provided."
     input_text_field : str, optional
         Field within each dict to insert as the input context text, by default "text"
     desired_text_field : str, optional
@@ -39,15 +39,7 @@ def create_llama_2_dataset(
 
     dataset = []
     for d in data:
-        dataset.append(
-            {
-                "text": LLAMA2_TEMPLATE.format(
-                    system_prompt=sys_prompt,
-                    input_text=d[input_text_field],
-                    desired_text=d[desired_text_field],
-                ).replace("\n", " ")
-            }
-        )
+        dataset.append(d)
 
     # Write out as JSONL file
     with open(file_path_out, "w") as f:
