@@ -21,7 +21,7 @@ from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments, AutoTokenizer
 from transformers.integrations import MLflowCallback
 from trl import SFTTrainer
 
@@ -44,7 +44,7 @@ class ScriptArguments:
     log_with: Optional[str] = field(default="none", metadata={"help": "use 'wandb' to log with wandb"})
     learning_rate: Optional[float] = field(default=1.41e-5, metadata={"help": "the learning rate"})
     batch_size: Optional[int] = field(default=64, metadata={"help": "the batch size"})
-    seq_length: Optional[int] = field(default=512, metadata={"help": "Input sequence length"})
+    seq_length: Optional[int] = field(default=4096, metadata={"help": "Input sequence length"})
     gradient_accumulation_steps: Optional[int] = field(
         default=16, metadata={"help": "the number of gradient accumulation steps"}
     )
@@ -65,9 +65,13 @@ class ScriptArguments:
     save_total_limit: Optional[int] = field(default=10, metadata={"help": "Limits total number of checkpoints."})
     push_to_hub: Optional[bool] = field(default=False, metadata={"help": "Push the model to HF Hub"})
     hub_model_id: Optional[str] = field(default=None, metadata={"help": "The name of the model on HF Hub"})
+    # Custom ----
     mlflow_experiment_name: Optional[str] = field(default=None, metadata={"help": "The name of the MLflow experiment"})
     mlflow_tracking_uri: Optional[str] = field(default=None, metadata={"help": "mlflow_tracking_uri"})
     mlflow_run_name: Optional[str] = field(default=None, metadata={"help": "Name of the MLflow run"})
+    article_word_threshold: Optional[int] = field(
+        default=2000, metadata={"help": "The number of words to sample from beginning of article"}
+    )
 
 
 parser = HfArgumentParser(ScriptArguments)
@@ -97,11 +101,28 @@ model = AutoModelForCausalLM.from_pretrained(
     use_auth_token=script_args.use_auth_token,
 )
 
+tokenizer = AutoTokenizer.from_pretrained(script_args.model_name)
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
+
 # Step 2: Load the dataset
 if "jsonl" in script_args.dataset_name:
     dataset = load_dataset("json", data_files=script_args.dataset_name, split="train")
 else:
     dataset = load_dataset(script_args.dataset_name, split="train")
+
+
+def format_instruction(sample):
+    return f"""### Instruction:
+Use the article title and text below, to write the funniest possible comment about this article.
+
+### Input:
+{sample['title_article_text'][:script_args.article_word_threshold]}
+
+### Response:
+{sample['top_comment_text']}
+"""
+
 
 # Step 3: Define the training arguments
 training_args = TrainingArguments(
@@ -136,11 +157,14 @@ os.environ["MLFLOW_EXPERIMENT_NAME"] = script_args.mlflow_experiment_name
 os.environ["MLFLOW_TRACKING_URI"] = script_args.mlflow_tracking_uri
 trainer = SFTTrainer(
     model=model,
+    tokenizer=tokenizer,
     args=training_args,
     max_seq_length=script_args.seq_length,
     train_dataset=dataset,
     callbacks=[MLflowCallback()],
-    dataset_text_field=script_args.dataset_text_field,
+    # dataset_text_field=script_args.dataset_text_field,
+    packing=True,
+    formatting_func=format_instruction,
     peft_config=peft_config,
 )
 
