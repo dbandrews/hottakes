@@ -15,9 +15,11 @@
 from dataclasses import dataclass, field
 import os
 from typing import Optional
+import uuid
 
 import torch
 from accelerate import Accelerator
+import mlflow
 from datasets import load_dataset
 from peft import LoraConfig
 from tqdm import tqdm
@@ -99,6 +101,7 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=script_args.trust_remote_code,
     torch_dtype=torch_dtype,
     use_auth_token=script_args.use_auth_token,
+    use_flash_attention_2=True,
 )
 
 tokenizer = AutoTokenizer.from_pretrained(script_args.model_name)
@@ -117,7 +120,7 @@ def format_instruction(sample):
 Use the article title and text below, to write the funniest possible comment about this article.
 
 ### Input:
-{sample['title_article_text'][:script_args.article_word_threshold]}
+{" ".join(sample['title_article_text'].split(' ')[:script_args.article_word_threshold])}
 
 ### Response:
 {sample['top_comment_text']}
@@ -138,7 +141,7 @@ training_args = TrainingArguments(
     save_total_limit=script_args.save_total_limit,
     push_to_hub=script_args.push_to_hub,
     hub_model_id=script_args.hub_model_id,
-    run_name=script_args.mlflow_run_name,
+    run_name=f"{script_args.mlflow_run_name}-{uuid.uuid4()}",
 )
 
 # Step 4: Define the LoraConfig
@@ -146,6 +149,12 @@ if script_args.use_peft:
     peft_config = LoraConfig(
         r=script_args.peft_lora_r,
         lora_alpha=script_args.peft_lora_alpha,
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+        ],
         bias="none",
         task_type="CAUSAL_LM",
     )
@@ -167,6 +176,11 @@ trainer = SFTTrainer(
     formatting_func=format_instruction,
     peft_config=peft_config,
 )
+
+# Log additional parameters to MLflow, all args that are in script args, but not training args
+for arg in vars(script_args):
+    if arg not in vars(training_args):
+        mlflow.log_param(arg, getattr(script_args, arg))
 
 trainer.train()
 
