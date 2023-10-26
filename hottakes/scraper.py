@@ -122,4 +122,9 @@ if __name__ == "__main__":
     results = [result for job_result in results for result in job_result]
     df_details = pd.DataFrame(results)
     df_details.columns = df_details.columns.str.lower().str.replace(" ", "_")
-    df_details.to_csv("article_details.csv", index=False)
+    df_details = (
+        df_details.replace("N/A", np.nan)
+        .dropna()
+        .assign(title_article_text=lambda _df: (_df.title + ": " + _df.article_text))
+    )
+    df_details.to_json("article_details.json", orient="records")
