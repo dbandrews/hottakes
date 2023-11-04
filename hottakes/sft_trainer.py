@@ -15,6 +15,7 @@
 from dataclasses import dataclass, field
 import os
 from typing import Optional
+from pathlib import Path
 import uuid
 
 import torch
@@ -128,8 +129,9 @@ Use the article title and text below, to write the funniest possible comment abo
 
 
 # Step 3: Define the training arguments
+mlflow_run_name = f"{script_args.mlflow_run_name}-{uuid.uuid4()}"
 training_args = TrainingArguments(
-    output_dir=script_args.output_dir,
+    output_dir=Path(script_args.output_dir) / mlflow_run_name,
     per_device_train_batch_size=script_args.batch_size,
     gradient_accumulation_steps=script_args.gradient_accumulation_steps,
     learning_rate=script_args.learning_rate,
@@ -141,7 +143,7 @@ training_args = TrainingArguments(
     save_total_limit=script_args.save_total_limit,
     push_to_hub=script_args.push_to_hub,
     hub_model_id=script_args.hub_model_id,
-    run_name=f"{script_args.mlflow_run_name}-{uuid.uuid4()}",
+    run_name=mlflow_run_name,
 )
 
 # Step 4: Define the LoraConfig
@@ -171,18 +173,18 @@ trainer = SFTTrainer(
     max_seq_length=script_args.seq_length,
     train_dataset=dataset,
     callbacks=[MLflowCallback()],
-    # dataset_text_field=script_args.dataset_text_field,
     packing=True,
     formatting_func=format_instruction,
     peft_config=peft_config,
 )
 
 # Log additional parameters to MLflow, all args that are in script args, but not training args
-for arg in vars(script_args):
-    if arg not in vars(training_args):
-        mlflow.log_param(arg, getattr(script_args, arg))
+with mlflow.start_run(run_name=mlflow_run_name):
+    for arg in vars(script_args):
+        if arg not in vars(training_args):
+            mlflow.log_param(arg, getattr(script_args, arg))
 
-trainer.train()
+    trainer.train()
 
 # Step 6: Save the model
 trainer.save_model(script_args.output_dir)

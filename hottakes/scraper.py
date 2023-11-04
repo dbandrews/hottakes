@@ -102,7 +102,7 @@ def get_comment_votes(url):
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Find all div elements with a class name starting with "cmcont"
-        divs = soup.find_all("div", class_="cmcont")
+        divs = soup.find_zall("div", class_="cmcont")
 
         # Iterate through the found div elements
         results = []
