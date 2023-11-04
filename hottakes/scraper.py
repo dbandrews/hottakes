@@ -88,6 +88,7 @@ def get_article_details(url):
     return dict
 
 
+# %%
 if __name__ == "__main__":
     # Settings
     years = list(range(2023, 1999, -1))
