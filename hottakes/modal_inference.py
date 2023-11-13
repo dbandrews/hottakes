@@ -1,18 +1,20 @@
 import os
-from modal import Image, Secret, Stub, method
+from modal import Image, Secret, Stub, method, web_endpoint
 
-MODEL_DIR = "/model"
-BASE_MODEL = "dbandrews/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c"
+PEFT_MODEL = "dbandrews/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c"
+BASE_MODEL = "mistralai/Mistral-7B-v0.1"
 
 
 def download_model_to_folder():
     from huggingface_hub import snapshot_download
 
-    os.makedirs(MODEL_DIR, exist_ok=True)
-
     snapshot_download(
         BASE_MODEL,
-        local_dir=MODEL_DIR,
+        token=os.environ["HUGGINGFACE_TOKEN"],
+    )
+
+    snapshot_download(
+        PEFT_MODEL,
         token=os.environ["HUGGINGFACE_TOKEN"],
     )
 
@@ -33,6 +35,7 @@ image = (
         download_model_to_folder,
         secret=Secret.from_name("huggingface-secret"),
         timeout=60 * 20,
+        # force_build=True,
     )
 )
 
@@ -50,13 +53,12 @@ class HottakesModel:
         from transformers import AutoTokenizer
 
         self.model = AutoPeftModelForCausalLM.from_pretrained(
-            BASE_MODEL,
-            cache_dir=MODEL_DIR,
+            PEFT_MODEL,
             low_cpu_mem_usage=True,
             torch_dtype=torch.float16,
             load_in_8bit=True,
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, cache_dir=MODEL_DIR)
+        self.tokenizer = AutoTokenizer.from_pretrained(PEFT_MODEL)
         self.template = """### Instruction:
 Use the article title and text below, to write the funniest possible comment about this article.
 
@@ -66,7 +68,8 @@ Use the article title and text below, to write the funniest possible comment abo
 ### Response:
 """
 
-    @method()
+    # @method()
+    @web_endpoint()
     def generate(self, title_article_text: str):
         inputs = self.tokenizer(
             self.template.format(title_article_text=title_article_text), return_tensors="pt", truncation=True
@@ -81,11 +84,33 @@ Use the article title and text below, to write the funniest possible comment abo
         ]
         # print(f"Input Prompt: {self.template}")
         print(f"Generated response:\n{generated_response}")
+        return generated_response
 
 
-@stub.local_entrypoint()
-def main():
-    model = HottakesModel()
-    model.generate.remote(
-        title_article_text="Replay: Crankworx Whistler - SRAM Canadian Open Enduro Presented by Specialized - Pinkbike:   Related ContentKing and Queen of Crankworx World Tour: Current StandingsPhoto Epic: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedVideo: The Ever Changing Game - EWS Whistler, One Minute Round UpResults: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedPhoto Epic: Bringing Back the Fun - EWS Whistler, PracticeVideo: Top of the World into Khyber - EWS Whistler, Track RideVideo: Different Winners at Every Round - EWS Whistler, IntroMENTIONS: @officialcrankworx / @SramMedia / @Specialized / @WhistlerMountainBikePark / @EnduroWorldSeries  "
-    )
+# @stub.local_entrypoint()
+# def main():
+#     model = HottakesModel()
+#     model.generate.remote(
+#         title_article_text="Replay: Crankworx Whistler - SRAM Canadian Open Enduro Presented by Specialized - Pinkbike:   Related ContentKing and Queen of Crankworx World Tour: Current StandingsPhoto Epic: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedVideo: The Ever Changing Game - EWS Whistler, One Minute Round UpResults: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedPhoto Epic: Bringing Back the Fun - EWS Whistler, PracticeVideo: Top of the World into Khyber - EWS Whistler, Track RideVideo: Different Winners at Every Round - EWS Whistler, IntroMENTIONS: @officialcrankworx / @SramMedia / @Specialized / @WhistlerMountainBikePark / @EnduroWorldSeries  "
+#     )
+
+
+if __name__ == "__main__":
+    import requests
+    import urllib.parse
+    import time
+    from scraper import get_article_details
+
+    url = "https://www.pinkbike.com/news/bike-check-jackson-greens-generalized-mountain-bike.html"
+    sample = get_article_details(url)
+    sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
+    sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
+
+    start_time = time.time()
+    generation = requests.get(
+        "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?title_article_text="
+        + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
+    ).json()
+    print(f"Generation took {time.time() - start_time} seconds")
+
+    print(generation)
