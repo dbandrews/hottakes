@@ -172,7 +172,7 @@ if __name__ == "__main__":
         .dropna()
         .assign(title_article_text=lambda _df: (_df.title + ": " + _df.article_text))
     )
-    df_details.to_json("article_details.json", orient="records")
+    df_details.to_csv("article_details.csv", index=False)
 
     # _______________Article Comments_______________
     comments = []
@@ -198,9 +198,6 @@ if __name__ == "__main__":
     # Flatten list of lists
     results = [result for job_result in results for result in job_result]
 
-    with open("article_comments.json", "w") as f:
-        json.dump(results, f)
-
     df_comments = pd.DataFrame(results)
     df_comments.columns = df_comments.columns.str.lower().str.replace(" ", "_")
-    df_comments.to_json("article_comments.json", orient="records")
+    df_comments.to_csv("article_comments.csv", index=False)

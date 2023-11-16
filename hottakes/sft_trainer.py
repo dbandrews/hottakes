@@ -75,6 +75,12 @@ class ScriptArguments:
     article_word_threshold: Optional[int] = field(
         default=2000, metadata={"help": "The number of words to sample from beginning of article"}
     )
+    pcu_value_threshold: Optional[int] = field(
+        default=0, metadata={"help": "The minimum number upvotes (pcu) value to use article"}
+    )
+    pcd_pcu_ratio_threshold: Optional[float] = field(
+        default=0.5, metadata={"help": "The maxium ratio downvotes/upvotes (pcd/pcu) to use article"}
+    )
 
 
 parser = HfArgumentParser(ScriptArguments)
@@ -114,6 +120,14 @@ if "jsonl" in script_args.dataset_name:
     dataset = load_dataset("json", data_files=script_args.dataset_name, split="train")
 else:
     dataset = load_dataset(script_args.dataset_name, split="train")
+
+# Step 2.1: Filter the dataset based on pcu and pcd
+print(f"Dataset size before filtering: {len(dataset)}")
+dataset = dataset.filter(
+    lambda x: x["pcu_value"] > script_args.pcu_value_threshold
+    and x["pcd_value"] / x["pcu_value"] < script_args.pcd_pcu_ratio_threshold
+)
+print(f"Dataset size after filtering: {len(dataset)}")
 
 
 def format_instruction(sample):
