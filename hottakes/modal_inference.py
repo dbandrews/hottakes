@@ -68,8 +68,8 @@ Use the article title and text below, to write the funniest possible comment abo
 ### Response:
 """
 
-    # @method()
-    @web_endpoint()
+    @method()
+    # @web_endpoint()
     def generate(self, title_article_text: str):
         inputs = self.tokenizer(
             self.template.format(title_article_text=title_article_text), return_tensors="pt", truncation=True
@@ -87,30 +87,30 @@ Use the article title and text below, to write the funniest possible comment abo
         return generated_response
 
 
-# @stub.local_entrypoint()
-# def main():
-#     model = HottakesModel()
-#     model.generate.remote(
-#         title_article_text="Replay: Crankworx Whistler - SRAM Canadian Open Enduro Presented by Specialized - Pinkbike:   Related ContentKing and Queen of Crankworx World Tour: Current StandingsPhoto Epic: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedVideo: The Ever Changing Game - EWS Whistler, One Minute Round UpResults: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedPhoto Epic: Bringing Back the Fun - EWS Whistler, PracticeVideo: Top of the World into Khyber - EWS Whistler, Track RideVideo: Different Winners at Every Round - EWS Whistler, IntroMENTIONS: @officialcrankworx / @SramMedia / @Specialized / @WhistlerMountainBikePark / @EnduroWorldSeries  "
-#     )
+@stub.local_entrypoint()
+def main():
+    model = HottakesModel()
+    model.generate.remote(
+        title_article_text="Replay: Crankworx Whistler - SRAM Canadian Open Enduro Presented by Specialized - Pinkbike:   Related ContentKing and Queen of Crankworx World Tour: Current StandingsPhoto Epic: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedVideo: The Ever Changing Game - EWS Whistler, One Minute Round UpResults: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedPhoto Epic: Bringing Back the Fun - EWS Whistler, PracticeVideo: Top of the World into Khyber - EWS Whistler, Track RideVideo: Different Winners at Every Round - EWS Whistler, IntroMENTIONS: @officialcrankworx / @SramMedia / @Specialized / @WhistlerMountainBikePark / @EnduroWorldSeries  "
+    )
 
 
-if __name__ == "__main__":
-    import requests
-    import urllib.parse
-    import time
-    from scraper import get_article_details
+# if __name__ == "__main__":
+#     import requests
+#     import urllib.parse
+#     import time
+#     from scraper import get_article_details
 
-    url = "https://www.pinkbike.com/news/bike-check-jackson-greens-generalized-mountain-bike.html"
-    sample = get_article_details(url)
-    sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
-    sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
+#     url = "https://www.pinkbike.com/news/august-online-deals-2016.html"
+#     sample = get_article_details(url)
+#     sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
+#     sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
 
-    start_time = time.time()
-    generation = requests.get(
-        "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?title_article_text="
-        + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
-    ).json()
-    print(f"Generation took {time.time() - start_time} seconds")
+#     start_time = time.time()
+#     generation = requests.get(
+#         "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?title_article_text="
+#         + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
+#     ).json()
+#     print(f"Generation took {time.time() - start_time} seconds")
 
-    print(generation)
+#     print(generation)

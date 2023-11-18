@@ -104,6 +104,12 @@ class ScriptArguments:
         default=100, metadata={"help": "Number of updates steps before two checkpoint saves"}
     )
     eval_steps: Optional[int] = field(default=500, metadata={"help": "Number of updates steps before eval"})
+    chosen_pcu_threshold: Optional[int] = field(
+        default=1000, metadata={"help": "The minimum number of upvotes on the top comment"}
+    )
+    rejected_pcd_threshold: Optional[int] = field(
+        default=1000, metadata={"help": "The minimum number of downvotes on the worst comment"}
+    )
 
 
 def extract_anthropic_prompt(prompt_and_response):
@@ -203,6 +209,13 @@ if __name__ == "__main__":
 
     # # Step 2: Load the dataset
     dataset = load_dataset("json", data_files=script_args.dataset_name, split="train")
+    # Step 2.1: Filter the dataset based on pcu and pcd
+    print(f"Dataset size before filtering: {len(dataset)}")
+    dataset = dataset.filter(
+        lambda x: x["chosen_pcu"] > script_args.chosen_pcu_threshold
+        and x["rejected_pcd"] > script_args.rejected_pcd_threshold
+    )
+    print(f"Dataset size after filtering: {len(dataset)}")
     # Convert the dataset to the format expected by the DPOTrainer, with 3 keys and lists under each
     # key. The keys are "prompt", "chosen", and "rejected". The values under each key are lists of
     # strings.

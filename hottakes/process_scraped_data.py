@@ -48,6 +48,7 @@ def build_dpo_dataset(
         --df_article_details_path data/article_details.json \
         --output_path data/processed/dpo_dataset.jsonl
     """
+
     df_comments = pd.read_csv(df_comments_path)
     df_article_details = pd.read_json(df_article_details_path)
     df_article_details["title_article_text"] = df_article_details.title + " " + df_article_details.article_text
@@ -98,7 +99,7 @@ def build_dpo_dataset(
                 "pcd_value_top": "chosen_pcd",
                 "pcd_value_worst": "rejected_pcd",
             }
-        )[["prompt", "chosen", "rejected", "url"]]
+        )[["prompt", "chosen", "rejected", "url", "chosen_pcu", "rejected_pcu", "chosen_pcd", "rejected_pcd"]]
         .dropna(subset=["prompt", "chosen", "rejected"])
         # .shape
         .to_json(output_path, orient="records", lines=True)

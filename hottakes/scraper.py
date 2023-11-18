@@ -7,7 +7,6 @@ import requests
 import pandas as pd
 import numpy as np
 from bs4 import BeautifulSoup
-from tenacity import retry, stop_after_attempt, wait_fixed
 from tqdm import tqdm
 from joblib import Parallel, delayed
 
