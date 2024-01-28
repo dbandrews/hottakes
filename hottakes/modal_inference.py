@@ -95,22 +95,22 @@ def main():
     )
 
 
-# if __name__ == "__main__":
-#     import requests
-#     import urllib.parse
-#     import time
-#     from scraper import get_article_details
+if __name__ == "__main__":
+    import requests
+    import urllib.parse
+    import time
+    from scraper import get_article_details
 
-#     url = "https://www.pinkbike.com/news/august-online-deals-2016.html"
-#     sample = get_article_details(url)
-#     sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
-#     sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
+    url = "https://www.pinkbike.com/news/august-online-deals-2016.html"
+    sample = get_article_details(url)
+    sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
+    sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
 
-#     start_time = time.time()
-#     generation = requests.get(
-#         "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?title_article_text="
-#         + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
-#     ).json()
-#     print(f"Generation took {time.time() - start_time} seconds")
+    start_time = time.time()
+    generation = requests.get(
+        "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?title_article_text="
+        + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
+    ).json()
+    print(f"Generation took {time.time() - start_time} seconds")
 
-#     print(generation)
+    print(generation)

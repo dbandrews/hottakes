@@ -50,7 +50,7 @@ python hottakes/process_scraped_data.py build_dpo_dataset \
 # SFT:
 
 ```
-python hottakes/sft_trainer.py \                                      
+python hottakes/sft_trainer.py \ 
 --model_name mistralai/Mistral-7B-v0.1 \
 --dataset_name data/processed/sft_dataset.jsonl \
 --load_in_4bit \
@@ -64,11 +64,11 @@ python hottakes/sft_trainer.py \
 # DPO:
 
 ```
-python hottakes/dpo_trainer.py \
---model_name output/mistral-v2-a5b0f997-2021-4b9d-850c-e5e34785ae91/checkpoint-1200 \
---dataset_name article_preferences.jsonl \
---load_in_4bit \
+python hottakes/dpo_trainer.py \                           
+--model_name output/mistral-v2-2020fbf3-bfae-451d-82fb-792ecb2cf0f7/checkpoint-4700 \
+--dataset_name data/processed/dpo_dataset.jsonl \        
+--load_in_4bit \                                  
 --use_peft \
---per_device_train_batch_size 1 --mlflow_experiment_name=hottakes_dpo --mlflow_run_name=mistral-v2 \
---mlflow_tracking_uri=http://192.168.0.26:5000 --gradient_accumulation_steps=64 --max_length=500 --max_prompt_length=300 --beta=0.1 --save_steps=5 --eval_steps=5 
+--per_device_train_batch_size 1 --mlflow_experiment_name=hottakes_dpo --mlflow_run_name=mistral-v3 \
+--mlflow_tracking_uri=http://192.168.0.26:5000 --gradient_accumulation_steps=128 --learning_rate=1e-4 --max_length=500 --max_prompt_length=300 --beta=0.1 --save_steps=5 --eval_steps=5 --chosen_pcu_threshold=90 --rejected_pcd_threshold=50
 ```

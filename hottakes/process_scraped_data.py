@@ -84,9 +84,9 @@ def build_dpo_dataset(
         .pipe(filter_articles)
         .assign(
             prompt=lambda _df: """### Instruction:
-    Use the article title and text below, to write the funniest possible comment about this article.
+Use the article title and text below, to write the funniest possible comment about this article.
 
-    ### Input:\n"""
+### Input:\n"""
             + _df.title_article_text.str[:600]
             + "\n\n### Response:\n",
         )
