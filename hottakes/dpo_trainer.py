@@ -106,10 +106,10 @@ class ScriptArguments:
     )
     eval_steps: Optional[int] = field(default=500, metadata={"help": "Number of updates steps before eval"})
     chosen_pcu_threshold: Optional[int] = field(
-        default=1000, metadata={"help": "The minimum number of upvotes on the top comment"}
+        default=0, metadata={"help": "The minimum number of upvotes on the top comment"}
     )
     rejected_pcd_threshold: Optional[int] = field(
-        default=1000, metadata={"help": "The minimum number of downvotes on the worst comment"}
+        default=0, metadata={"help": "The minimum number of downvotes on the worst comment"}
     )
 
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         device_map=device_map,
         trust_remote_code=True,
         torch_dtype=torch_dtype,
-        # use_flash_attention_2=True,
+        use_flash_attention_2=True,
     )
     model.enable_input_require_grads()
 
@@ -176,8 +176,8 @@ if __name__ == "__main__":
     # Step 2.1: Filter the dataset based on pcu and pcd
     print(f"Dataset size before filtering: {len(dataset)}")
     dataset = dataset.filter(
-        lambda x: x["chosen_pcu"] > script_args.chosen_pcu_threshold
-        and x["rejected_pcd"] > script_args.rejected_pcd_threshold
+        lambda x: x["chosen_pcu"] >= script_args.chosen_pcu_threshold
+        and x["rejected_pcd"] >= script_args.rejected_pcd_threshold
     )
     print(f"Dataset size after filtering: {len(dataset)}")
     # Convert the dataset to the format expected by the DPOTrainer, with 3 keys and lists under each
@@ -194,8 +194,6 @@ if __name__ == "__main__":
     dataset = dataset.train_test_split(test_size=0.1, seed=42)
     train_dataset = dataset["train"]
     valid_dataset = dataset["test"]
-    # train_dataset = get_hh("train", sanity_check=script_args.sanity_check)
-    # valid_dataset = get_hh("test", sanity_check=script_args.sanity_check)
     print("Dataset formatted")
 
     # 4. initialize training arguments:
@@ -243,7 +241,9 @@ if __name__ == "__main__":
 
     # 6. train
     with mlflow.start_run(run_name=mlflow_run_name):
-        for arg in ["chosen_pcu_threshold", "rejected_pcd_threshold"]:
-            mlflow.log_param(arg, getattr(script_args, arg))
+        # Log arguments that aren't part of training args
+        for arg in script_args.__dict__:
+            if arg not in training_args.__dict__ and arg not in ["max_length"]:
+                mlflow.log_param(arg, getattr(script_args, arg))
 
         dpo_trainer.train()
