@@ -63,6 +63,9 @@ python hottakes/sft_trainer.py \
 
 # DPO:
 
+
+High grade the dataset to remove low quality comments:
+
 ```
 python hottakes/dpo_trainer.py \                           
 --model_name output/mistral-v2-2020fbf3-bfae-451d-82fb-792ecb2cf0f7/checkpoint-4700 \
@@ -71,4 +74,15 @@ python hottakes/dpo_trainer.py \
 --use_peft \
 --per_device_train_batch_size 1 --mlflow_experiment_name=hottakes_dpo --mlflow_run_name=mistral-v3 \
 --mlflow_tracking_uri=http://192.168.0.26:5000 --gradient_accumulation_steps=128 --learning_rate=1e-4 --max_length=500 --max_prompt_length=300 --beta=0.1 --save_steps=5 --eval_steps=5 --chosen_pcu_threshold=90 --rejected_pcd_threshold=50
+```
+
+
+```
+python hottakes/dpo_trainer.py \
+--model_name output/mistral-v2-41834087-8a6c-4bac-9735-489842938712/checkpoint-2700 \
+--dataset_name data/processed/dpo_dataset.jsonl \
+--load_in_4bit \
+--use_peft \
+--per_device_train_batch_size=1 --mlflow_experiment_name=hottakes_dpo --mlflow_run_name=mistral-v3 \
+--mlflow_tracking_uri=http://192.168.0.26:5000 --gradient_accumulation_steps=128 --learning_rate=1e-4 --max_length=500 --max_prompt_length=300 --beta=0.1 --save_steps=5 --eval_steps=20
 ```
