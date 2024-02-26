@@ -74,10 +74,10 @@ Use the article title and text below, to write the funniest possible comment abo
 """
 
     # For testing, executing from local terminal
-    # @method()
+    @method()
     # To deploy web endpoint, uncomment the following line
-    @web_endpoint()
-    def generate(self, list_of_title_article_text: list[str]) -> list[str]:
+    # @web_endpoint()
+    def generate(self, list_of_title_article_text: list) -> list:
         """Generate comments for a list of title + article text.
 
         Parameters
@@ -102,36 +102,42 @@ Use the article title and text below, to write the funniest possible comment abo
         )
 
         results = self.llm.generate(prompts, sampling_params)
+        results = [result.outputs[0].text for result in results]
+        print(results)
         return results
 
 
 # Test locally with `modal run hottakes/modal_inference.py`
-# @stub.local_entrypoint()
-# def main():
-#     model = HottakesModel()
-#     model.generate.remote(
-#         list_of_title_article_text=["Replay: Crankworx Whistler - SRAM Canadian Open Enduro Presented by Specialized - Pinkbike:   Related ContentKing and Queen of Crankworx World Tour: Current StandingsPhoto Epic: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedVideo: The Ever Changing Game - EWS Whistler, One Minute Round UpResults: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedPhoto Epic: Bringing Back the Fun - EWS Whistler, PracticeVideo: Top of the World into Khyber - EWS Whistler, Track RideVideo: Different Winners at Every Round - EWS Whistler, IntroMENTIONS: @officialcrankworx / @SramMedia / @Specialized / @WhistlerMountainBikePark / @EnduroWorldSeries  "]
-#     )
+@stub.local_entrypoint()
+def main():
+    model = HottakesModel()
+    model.generate.remote(
+        list_of_title_article_text=[
+            "Replay: Crankworx Whistler - SRAM Canadian Open Enduro Presented by Specialized - Pinkbike:   Related ContentKing and Queen of Crankworx World Tour: Current StandingsPhoto Epic: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedVideo: The Ever Changing Game - EWS Whistler, One Minute Round UpResults: Crankworx Whistler - SRAM Canadian Open Enduro presented by SpecializedPhoto Epic: Bringing Back the Fun - EWS Whistler, PracticeVideo: Top of the World into Khyber - EWS Whistler, Track RideVideo: Different Winners at Every Round - EWS Whistler, IntroMENTIONS: @officialcrankworx / @SramMedia / @Specialized / @WhistlerMountainBikePark / @EnduroWorldSeries  ",
+            "Video: Richie Rude loses at Whistler EWS",
+            "Photo Epic: Top 10 best places to ride",
+        ]
+    )
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    # Testing code __________________________________
-    import requests
-    import urllib.parse
-    import time
-    from scraper import get_article_details
+#     # Testing code __________________________________
+#     import requests
+#     import urllib.parse
+#     import time
+#     from scraper import get_article_details
 
-    url = "https://www.pinkbike.com/news/august-online-deals-2016.html"
-    sample = get_article_details(url)
-    sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
-    sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
+#     url = "https://www.pinkbike.com/news/august-online-deals-2016.html"
+#     sample = get_article_details(url)
+#     sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
+#     sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
 
-    start_time = time.time()
-    generation = requests.get(
-        "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?list_of_title_article_text="
-        + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
-    ).json()
-    print(f"Generation took {time.time() - start_time} seconds")
+#     start_time = time.time()
+#     generation = requests.get(
+#         "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run?list_of_title_article_text="
+#         + urllib.parse.quote_plus(" ".join(sample["title_article_text"].split()[:300]))
+#     ).json()
+#     print(f"Generation took {time.time() - start_time} seconds")
 
-    print(generation)
+#     print(generation)

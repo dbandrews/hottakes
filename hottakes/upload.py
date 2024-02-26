@@ -2,6 +2,7 @@ import getpass
 
 from peft import AutoPeftModelForCausalLM
 import torch
+from transformers import AutoTokenizer
 from huggingface_hub import HfApi
 import fire
 
@@ -14,6 +15,8 @@ def merge_adapter(checkpoint_dir: str, output_path: str):
     )
     model_merged = model.merge_and_unload()
     model_merged.save_pretrained(output_path)
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
+    tokenizer.save_pretrained(output_path)
     print(f"Merged model saved to {output_path}")
 
 
@@ -27,10 +30,7 @@ def upload_model(repo_id: str, folder_path: str, username: str, token: str = Non
     """
     # token = getpass.getpass("Token:") if token is None else token
     api = HfApi()
-    api.create_repo(
-        repo_id=f"{username}/{repo_id}",
-        repo_type="model",
-    )
+    api.create_repo(repo_id=f"{username}/{repo_id}", repo_type="model", exist_ok=True)
     api.upload_folder(
         folder_path=folder_path,
         repo_id=f"{username}/{repo_id}",

@@ -20,7 +20,8 @@ from random import randrange
 # checkpoint_dir = (
 #     "output/mistral-v3-dpo-97b42f50-9949-493e-8a57-0cd5dcf00e34/checkpoint-340"  # best qualitatively as of 2024-01-01
 # )
-checkpoint_dir = "output/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c/checkpoint-100"
+checkpoint_dir = "output/mistral-v3-dpo-db20c9b7-8db0-4937-a8b6-65ff4aa77ebf/checkpoint-320"
+# checkpoint_dir = "output/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c/checkpoint-100"
 # checkpoint_dir = "output/mistral-v3-dpo-543c54f8-a17a-46ff-8ed2-f60a2228e229/checkpoint-370"
 # checkpoint_dir = "output/mistral-v3-dpo-80b91b5c-a472-4478-a481-08b3fd66128b/checkpoint-220"
 # checkpoint_dir = "output/mistral-v3-dpo-1eea94c8-1a63-40b7-a731-0d06f900c5d7/checkpoint-310"
@@ -30,8 +31,9 @@ model = AutoPeftModelForCausalLM.from_pretrained(
     checkpoint_dir,
     low_cpu_mem_usage=True,
     torch_dtype=torch.float16,
-    load_in_8bit=True,
+    # load_in_8bit=True,
 )
+
 tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
 # tokenizer.pad_token = tokenizer.eos_token
 # tokenizer.padding_side = "right"
@@ -40,7 +42,8 @@ dataset = load_dataset("json", data_files="data/processed/sft_dataset.jsonl", sp
 
 
 # %% _________________________________________________________________________________
-sample = dataset[randrange(len(dataset))]
+# sample = dataset[randrange(len(dataset))]
+model_merged = model.merge_and_unload()
 
 
 # %%
