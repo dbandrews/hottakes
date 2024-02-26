@@ -81,11 +81,11 @@ def get_article_details(url):
         top_comment = "N/A"
 
     dict = {
-        "URL": url,
-        "Title": str(title),
-        "Description": description,
-        "Article Text": text,
-        "Top Comment Text": top_comment,
+        "url": url,
+        "title": str(title),
+        "description": description,
+        "article_text": text,
+        "top_comment_text": top_comment,
     }
     return dict
 
@@ -101,7 +101,7 @@ def get_comment_votes(url):
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Find all div elements with a class name starting with "cmcont"
-        divs = soup.find_zall("div", class_="cmcont")
+        divs = soup.find_all("div", class_="cmcont")
 
         # Iterate through the found div elements
         results = []
@@ -125,9 +125,13 @@ def get_comment_votes(url):
             # Get the text content of the pcd_span, which is the value of "pcd"
             pcd_value = pcd_span.get_text(strip=True) if pcd_span else None
 
+            # Get the username from a link with pattern "/u/username"
+            username = div.find("a", href=re.compile(r"/u/.*")).get_text(strip=True) if pcp_div else None
+
             # Print the extracted values
             result["pcu_value"] = pcu_value
             result["pcd_value"] = pcd_value
+            result["username"] = username
             results.append(result)
         return results
 
