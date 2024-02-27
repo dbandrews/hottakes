@@ -6,15 +6,21 @@ import pandas as pd
 import numpy as np
 from playwright.sync_api import Playwright, sync_playwright, expect
 from dotenv import load_dotenv
+from azure.storage.blob import BlobServiceClient
 
 from hottakes.scraper import get_article_details, get_comment_votes, get_article_urls
 from hottakes.bot.inference import generate_comments
+import json
 
 USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.81"
 
 
 class CommentBot:
-    "Comment on articles, that haven't already been commented on"
+    """
+    Comment on articles, that haven't already been commented on on Pinkbike.
+
+    Log comments to Azure blob storage.
+    """
 
     def __init__(self, username: str, password: str, headless: bool = False):
         self.username = username
@@ -42,20 +48,27 @@ class CommentBot:
         page.locator("#loginButton").click()
         self.page = page
 
-    def comment(self, url: str, comment: str):
+    def comment(self, url: str, comment: str) -> str:
+        """
+        Post a comment on an article - emit the comment id for logging
+        """
         self.page.goto(url)
         self.page.get_by_label("Post a Comment").click()
         self.page.get_by_label("Post a Comment").fill(comment)
-        # page.get_by_role("button", name="Submit").click()
+        self.page.get_by_role("button", name="Submit").click()
+        article_comments = get_comment_votes(url)
+        comment_id = pd.DataFrame(article_comments).query("username==@self.username").comment_id.iloc[0]
+        print("**************************************")
         print(f"Commented on {url}: ")
         print(f"{comment}")
+        print("**************************************")
+        return comment_id
 
-    def get_article_candidates(self, num_candidates: int = 3) -> list[str]:
+    def get_article_candidates(self) -> list[str]:
         """
         Get articles in current month, that haven't been commented on yet
         """
         articles = get_article_urls(year=datetime.now().year, month=datetime.now().month, catid=0)
-        articles = np.random.choice(articles, size=num_candidates)
         article_comments = [get_comment_votes(article) for article in articles]
         article_comments = pd.DataFrame([comment for comments in article_comments for comment in comments])
         articles_commented_already = article_comments.query("username==@self.username")
@@ -68,63 +81,50 @@ class CommentBot:
 
     def filter_article_candidates(self, candidates: list[str]):
         """
-        Filter candidates based on some criteria
+        Filter candidates to remove video and photo articles
         """
         return [candidate for candidate in candidates if "video" not in candidate and "photo" not in candidate]
 
     def get_candidate_article_texts(self, candidates: list[str]) -> list[str]:
         """
-        Get article texts for candidates
+        Get article texts for candidates.
         """
         article_details = [get_article_details(candidate) for candidate in candidates]
         article_title_and_text = [f"{article['title']} {article['article_text']}" for article in article_details]
         return article_title_and_text
 
     def run(self, num_comments_desired: int = 3) -> None:
-        candidate_articles = list(np.random.choice(self.get_article_candidates(), size=3))
+        # Commenton most recent articles
+        candidate_articles = self.get_article_candidates()[:num_comments_desired]
         candidate_article_texts = self.get_candidate_article_texts(candidate_articles)
         comments = generate_comments(candidate_article_texts)
         self.login()
         for article, comment in zip(candidate_articles, comments):
-            self.comment(article, comment)
+            comment_id = self.comment(article, comment)
+            self.log_comment(comment_id, url=article, comment=comment)
 
+    def log_comment(
+        self,
+        comment_id: str,
+        url: str,
+        comment: str,
+    ) -> None:
+        """
+        Log the comment to Azure blob storage
+        """
+        comment_log = {
+            "comment_id": comment_id,
+            "url": url,
+            "comment": comment,
+            "datetime": datetime.now().isoformat(),
+        }
 
-# def run(playwright: Playwright) -> None:
-#     browser = playwright.chromium.launch(headless=False)
-#     context = browser.new_context()
-#     page = context.new_page()
-#     page.goto("https://www.pinkbike.com/")
-#     page.get_by_role("link", name="Log in").click()
-#     page.locator('input[name="username-login-loginlen"]').click()
-#     page.locator('input[name="username-login-loginlen"]').fill("joeyjoejoe")
-#     page.locator('input[name="username-login-loginlen"]').press("Tab")
-#     page.locator('input[name="password-password-lt200"]').click()
-#     page.locator('input[name="password-password-lt200"]').fill("Eligible-Tribune-Destitute8")
-#     page.locator("#loginButton").click()
-#     page.get_by_role("link", name="News").click()
-#     page.get_by_role("link", name="2023").click()
-#     page.get_by_role("link", name="2022", exact=True).click()
-#     page.get_by_role("link", name="2024", exact=True).click()
-#     page.get_by_role(
-#         "link", name="Finals Photo Epic: Red Bull Hardline Tasmania 2024 Finals Photo Epic: Red Bull Hardline Tasmania"
-#     ).click()
-#     page.get_by_label("Post a Comment").click()
-#     page.get_by_label("Post a Comment").click()
-#     page.get_by_label("Post a Comment").fill("Unreal riding!")
-#     page.get_by_role("button", name="Submit").click()
-#     page.goto("https://www.pinkbike.com/news/archive/?catid=0&year=2024&month=2")
-#     page.get_by_role(
-#         "link", name="Finals Photo Epic: Red Bull Hardline Tasmania 2024 Finals Photo Epic: Red Bull Hardline Tasmania"
-#     ).click()
-#     page.goto("https://www.pinkbike.com/news/archive/?catid=0&year=2024&month=2")
+        blob_service_client = BlobServiceClient.from_connection_string(os.getenv("AZURE_STORAGE_CONN_STR"))
+        container_name = "hottakes"
+        container_client = blob_service_client.get_container_client(container_name)
+        blob_client = container_client.get_blob_client(f"{comment_id}.json")
+        blob_client.upload_blob(json.dumps(comment_log))
 
-#     # ---------------------
-#     context.close()
-#     browser.close()
-
-
-# with sync_playwright() as playwright:
-#     run(playwright)
 
 if __name__ == "__main__":
     load_dotenv(".env")
