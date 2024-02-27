@@ -67,7 +67,7 @@ Use the article title and text below, to write the funniest possible comment abo
 """
 
     # For testing, executing from local terminal
-    # @method()
+    @method()
     # To deploy web endpoint, uncomment the following line
     @web_endpoint(method="POST")
     def generate(self, articles: ListOfTitleArticleText) -> list[str]:
