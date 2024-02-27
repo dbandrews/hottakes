@@ -3,7 +3,6 @@ concurrency: ${{ github.workflow }}
 
 on:
  schedule:
- # Run everyday at 12:00 AM
   - cron: '0 10 * * *'
  workflow_dispatch:
 
@@ -28,6 +27,6 @@ jobs:
       - name: Run Bot
         run: python3 hottakes/bot/driver.py
         env: 
-          PINKBIKE_USERNAME: ${{ secrets.PINKBIKE_USERNAME }}
+          PINKBIKE_USER: ${{ secrets.PINKBIKE_USER }}
           PINKBIKE_PASS: ${{ secrets.PINKBIKE_PASS }}
           AZURE_STORAGE_CONN_STR: ${{ secrets.AZURE_STORAGE_CONN_STR }}
