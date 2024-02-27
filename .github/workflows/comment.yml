@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Setup repo
         uses: actions/checkout@v4
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11.3
@@ -24,7 +24,8 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install -r requirements.txt
           python3 -m pip install -e .
-      - name: Run Scraper
+          python3 -m playwright install chromium
+      - name: Run Bot
         run: python3 hottakes/bot/driver.py
         env: 
           PINKBIKE_USERNAME: ${{ secrets.PINKBIKE_USERNAME }}
