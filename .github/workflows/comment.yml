@@ -1,0 +1,35 @@
+name: Scrape
+concurrency: ${{ github.workflow }}
+
+on:
+ schedule:
+   - cron: "23 */5 * * 1-6"
+ workflow_dispatch:
+    inputs:
+      num_jobs:
+        description: "How many cores to use in building link list"
+        required: true
+        default: '4'
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1000
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11.3
+      - name: Install package
+        run : |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install -e .
+      - name: Run Scraper
+        run: python3 hottakes/bot/driver.py
+        env: 
+          PINKBIKE_USERNAME: ${{ secrets.PINKBIKE_USERNAME }}
+          PINKBIKE_PASS: ${{ secrets.PINKBIKE_PASS }}
+          AZURE_STORAGE_CONN_STR: ${{ secrets.AZURE_STORAGE_CONN_STR }}

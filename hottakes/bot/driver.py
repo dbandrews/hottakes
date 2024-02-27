@@ -56,6 +56,7 @@ class CommentBot:
         self.page.get_by_label("Post a Comment").click()
         self.page.get_by_label("Post a Comment").fill(comment)
         self.page.get_by_role("button", name="Submit").click()
+        time.sleep(2)
         article_comments = get_comment_votes(url)
         comment_id = pd.DataFrame(article_comments).query("username==@self.username").comment_id.iloc[0]
         print("**************************************")
@@ -100,8 +101,29 @@ class CommentBot:
         comments = generate_comments(candidate_article_texts)
         self.login()
         for article, comment in zip(candidate_articles, comments):
+            if self.problem_comment_check(comment):
+                print("Problematic comment detected, skipping")
+                print(f"Comment: \n{comment}")
+                continue
             comment_id = self.comment(article, comment)
             self.log_comment(comment_id, url=article, comment=comment)
+
+    @staticmethod
+    def problem_comment_check(comment: str) -> bool:
+        """
+        Check if a comment is problematic, and has generation artifacts
+        """
+        # Check if comment contains ###
+        # Check if comment says "funniest"
+        # Check if comment contains ``` or code
+        if "###" in comment:
+            return True
+        if "funniest" in comment:
+            return True
+        if "```" in comment:
+            return True
+
+        return False
 
     def log_comment(
         self,
@@ -129,9 +151,4 @@ class CommentBot:
 if __name__ == "__main__":
     load_dotenv(".env")
     comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"))
-    # comment_bot.login()
-    # comment_bot.comment(
-    #     url="https://www.pinkbike.com/news/slack-randoms-snaix-neurobike-swampfest-carnage-cannonball-whip-off-and-more.html",
-    #     comment="Swampfest.....carnage!",
-    # )
     comment_bot.run()
