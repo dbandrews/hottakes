@@ -193,8 +193,17 @@ for checkpoint in tqdm(Path(base_checkpoint_dir).glob("checkpoint-*")):
     results.append(inferece_results)
 
 # %%
-df_results = (
+df_results = (zs
     pd.DataFrame(results)
     .assign(checkpoint=lambda _df: _df.checkpoint.str.extract(r"checkpoint-(\d+)").astype(int))
     .sort_values("checkpoint")
 )
+
+
+# %%
+import pandas as pd
+from hottakes.scraper import get_comment_votes
+
+pd.DataFrame(
+    get_comment_votes("https://www.pinkbike.com/news/photo-epic-finals-red-bull-hardline-tasmania-2024.html")
+).query("comment_id.str.contains('3726236')")

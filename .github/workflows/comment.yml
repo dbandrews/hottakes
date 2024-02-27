@@ -1,15 +1,12 @@
-name: Scrape
+name: Comment
 concurrency: ${{ github.workflow }}
 
 on:
  schedule:
-   - cron: "23 */5 * * 1-6"
+ # Run everyday at 12:00 AM
+  - cron: '0 10 * * *'
  workflow_dispatch:
-    inputs:
-      num_jobs:
-        description: "How many cores to use in building link list"
-        required: true
-        default: '4'
+
 
 jobs:
   comment:
