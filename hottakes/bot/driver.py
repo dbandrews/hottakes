@@ -60,7 +60,7 @@ class CommentBot:
         article_comments = get_comment_votes(url)
         comment_id = pd.DataFrame(article_comments).query("username==@self.username").comment_id.iloc[0]
         print("**************************************")
-        print(f"Commented on {url}: ")
+        print(f"Commented on {url} ")
         print(f"{comment}")
         print("**************************************")
         return comment_id
