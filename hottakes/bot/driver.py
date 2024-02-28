@@ -122,6 +122,8 @@ class CommentBot:
             return True
         if "```" in comment:
             return True
+        if len(comment.split()) < 5 or len(comment.split()) > 300:
+            return True
 
         return False
 
