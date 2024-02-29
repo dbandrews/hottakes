@@ -31,7 +31,7 @@ model = AutoPeftModelForCausalLM.from_pretrained(
     checkpoint_dir,
     low_cpu_mem_usage=True,
     torch_dtype=torch.float16,
-    # load_in_8bit=True,
+    load_in_8bit=True,
 )
 
 tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
@@ -43,7 +43,7 @@ dataset = load_dataset("json", data_files="data/processed/sft_dataset.jsonl", sp
 
 # %% _________________________________________________________________________________
 # sample = dataset[randrange(len(dataset))]
-model_merged = model.merge_and_unload()
+# model_merged = model.merge_and_unload()
 
 
 # %%
@@ -88,6 +88,8 @@ for top_p, temperature in [(1.0, 1.0)]:
             do_sample=True,
             top_p=top_p,
             temperature=temperature,
+            output_scores=True,
+            return_dict_in_generate=True,
             # eos_token_id=[
             #     tokenizer.eos_token_id,
             #     # 13,  # \n
@@ -101,10 +103,10 @@ for top_p, temperature in [(1.0, 1.0)]:
         )
 
     generated_response = tokenizer.batch_decode(
-        outputs[:, input_numel:].detach().cpu().numpy(), skip_special_tokens=True
+        outputs.sequences[:, input_numel:].detach().cpu().numpy(), skip_special_tokens=True
     )[0]
 
-    print(f"-----Title + Article Text:\n{sample['title_article_text']}\n")
+    print(f"-----Title + Article Text:\n{' '.join(sample['title_article_text'].split()[:300])}\n")
     print(f"-----Top_p: {top_p}, Temperature: {temperature}")
     print(f"----Generated Response:\n{generated_response}")
     print(f"-----Ground truth:\n{sample['top_comment_text']}")
@@ -113,92 +115,16 @@ for top_p, temperature in [(1.0, 1.0)]:
     print("\n\n")
 
 # %%
+# Inspect Log Probabilities
+transition_scores = model.compute_transition_scores(outputs.sequences, outputs.scores, normalize_logits=True).cpu()
+generated_tokens = outputs.sequences[:, input_numel:]
 
-# %%
-# Upload model to huggingface
-# import getpass
-# from huggingface_hub import HfApi
+accumulate_scores = []
+for tok, score in zip(generated_tokens[0], transition_scores[0]):
+    accumulate_scores.append(np.exp(score.numpy()))
+    print(f"| {tok:5d} | {tokenizer.decode(tok):8s} | {score.numpy():.3f} | {np.exp(score.numpy()):.2%}")
 
-# api = HfApi()
-# # api.create_repo(
-# #     repo_id="dbandrews/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c",
-# #     token=getpass.getpass("Token:"),
-# #     repo_type="model",
-# # )
-# api.upload_folder(
-#     folder_path="/home/drumm/projects/hottakes/models/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c",
-#     repo_id="dbandrews/mistral-v2-dpo-227c0f16-9588-4282-9bf9-6d057c254b0c",
-#     repo_type="model",
-#     token=getpass.getpass("Token:"),
-# )
-
-
-# %%
-
-
-def get_article_dict(url):
-    sample = get_article_details(url)
-    # Lower case, and underscore the keys
-    sample = {k.lower().replace(" ", "_"): v for k, v in sample.items()}
-    sample["title_article_text"] = f"{sample['title']} {sample['article_text']}"
-    return sample
-
-
-sample = get_article_dict("https://www.pinkbike.com/news/orange-bikes-resumes-trading-under-owner-ashley-ball.html")
-
-
-# sample = dataset[randrange(len(dataset))]
-prompt = f"""### Instruction:
-Use the article title and text below, to write the funniest possible comment about this article.
-
-### Input:
-{" ".join(sample['title_article_text'].strip().split(' ')[:300])}
-
-### Response:
-"""
-
-inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
-inputs = {k: v.to(model.device) for k, v in inputs.items()}
-input_numel = inputs["input_ids"].numel()
-
-base_checkpoint_dir = "output/mistral-v3-dpo-543c54f8-a17a-46ff-8ed2-f60a2228e229/"
-
-results = []
-for checkpoint in tqdm(Path(base_checkpoint_dir).glob("checkpoint-*")):
-    inferece_results = {}
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        checkpoint,
-        low_cpu_mem_usage=True,
-        torch_dtype=torch.float16,
-        load_in_8bit=True,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
-    start_time = time.time()
-    with torch.inference_mode():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=200,
-            do_sample=True,
-            top_p=0.9,
-            temperature=1.0,
-        )
-
-    inferece_results["time"] = time.time() - start_time
-    generated_response = tokenizer.batch_decode(
-        outputs[:, input_numel:].detach().cpu().numpy(), skip_special_tokens=True
-    )[0]
-
-    inferece_results["checkpoint"] = str(checkpoint)
-    inferece_results["generated_response"] = generated_response
-    results.append(inferece_results)
-
-# %%
-df_results = (zs
-    pd.DataFrame(results)
-    .assign(checkpoint=lambda _df: _df.checkpoint.str.extract(r"checkpoint-(\d+)").astype(int))
-    .sort_values("checkpoint")
-)
-
+print(f"Avg per token prob: {np.mean(accumulate_scores):.2%}")
 
 # %%
 import pandas as pd
