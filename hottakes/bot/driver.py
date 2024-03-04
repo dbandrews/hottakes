@@ -24,7 +24,7 @@ class CommentBot:
     Log comments to Azure blob storage.
     """
 
-    def __init__(self, username: str, password: str, headless: bool = False):
+    def __init__(self, username: str, password: str, headless: bool = True):
         self.username = username
         self.password = password
         self.headless = headless
