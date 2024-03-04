@@ -67,7 +67,7 @@ Use the article title and text below, to write the funniest possible comment abo
 """
 
     # For testing, executing from local terminal
-    @method()
+    # @method()
     # To deploy web endpoint, uncomment the following line
     @web_endpoint(method="POST")
     def generate(self, articles: ListOfTitleArticleText) -> list[str]:
@@ -90,7 +90,7 @@ Use the article title and text below, to write the funniest possible comment abo
         sampling_params = SamplingParams(
             temperature=1.0,
             top_p=1,
-            max_tokens=800,
+            max_tokens=400,
             # presence_penalty=1.15,
         )
 

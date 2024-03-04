@@ -9,10 +9,12 @@ from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
 
 from hottakes.scraper import get_article_details, get_comment_votes, get_article_urls
-from hottakes.bot.inference import generate_comments
+from hottakes.bot.inference import generate_comments_modal
 import json
 
-USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.81"
+# USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.81"
+# MACOS user agent
+USERAGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"
 
 
 class CommentBot:
@@ -98,7 +100,7 @@ class CommentBot:
         # Commenton most recent articles
         candidate_articles = self.get_article_candidates()[:num_comments_desired]
         candidate_article_texts = self.get_candidate_article_texts(candidate_articles)
-        comments = generate_comments(candidate_article_texts)
+        comments = generate_comments_modal(candidate_article_texts)
         self.login()
         for article, comment in zip(candidate_articles, comments):
             if self.problem_comment_check(comment):
@@ -152,5 +154,5 @@ class CommentBot:
 
 if __name__ == "__main__":
     load_dotenv(".env")
-    comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"), headless=True)
+    comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"), headless=False)
     comment_bot.run(num_comments_desired=1)
