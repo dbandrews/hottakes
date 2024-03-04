@@ -154,5 +154,5 @@ class CommentBot:
 
 if __name__ == "__main__":
     load_dotenv(".env")
-    comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"), headless=False)
+    comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"), headless=True)
     comment_bot.run(num_comments_desired=1)
