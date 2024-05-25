@@ -1,5 +1,7 @@
 import os
-from modal import Image, Secret, Stub, method, web_endpoint
+
+import modal
+from modal import App, Image, Secret, web_endpoint
 from pydantic import BaseModel
 
 MODEL_DIR = "/model"
@@ -44,15 +46,16 @@ image = (
     )
 )
 
-stub = Stub("hottakes-inference", image=image)
+app = App("hottakes-inference", image=image)
 
 
-@stub.cls(
+@app.cls(
     gpu="A10G",
     secrets=[Secret.from_name("huggingface-secret")],
 )
 class HottakesModel:
-    def __enter__(self):
+    @modal.enter()
+    def load_model(self):
         from vllm import LLM
 
         # Load the model. Tip: MPT models may require `trust_remote_code=true`.
@@ -100,7 +103,7 @@ Use the article title and text below, to write the funniest possible comment abo
         return results
 
     # Test locally with `modal run hottakes/modal_inference.py`
-    # @stub.local_entrypoint()
+    # @app.local_entrypoint()
     # def main():
     #     model = HottakesModel()
     #     model.generate.remote(
@@ -112,13 +115,13 @@ Use the article title and text below, to write the funniest possible comment abo
     #     )
 
     if __name__ == "__main__":
-
         # Testing code __________________________________
-        import requests
-        import urllib.parse
-        import time
-        from scraper import get_article_details
         import json
+        import time
+        import urllib.parse
+
+        import requests
+        from scraper import get_article_details
 
         url = "https://www.pinkbike.com/news/august-online-deals-2016.html"
         sample = get_article_details(url)
