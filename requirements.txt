@@ -7,7 +7,7 @@ ipykernel
 Jinja2
 joblib
 mlflow==2.10.2
-modal==0.62.181
+modal==0.72.50
 ninja==1.11.1.1
 numpy
 openai

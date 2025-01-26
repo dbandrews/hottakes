@@ -1,14 +1,25 @@
 import base64
-import os
-import requests
 import time
 from pathlib import Path
 
-from openai import OpenAI
-import fire
+import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 
-from hottakes.scraper import get_article_details
+from hottakes.scraper import BrowserServiceStrategy, get_article_details
+
+COLORS = {
+    "HEADER": "\033[95m",
+    "BLUE": "\033[94m",
+    "GREEN": "\033[92m",
+    "RED": "\033[91m",
+    "ENDC": "\033[0m",
+}
+
+
+def print_separator(char="=", length=80):
+    """Print a separator line"""
+    print(char * length)
 
 
 def generate_comments_modal(article_texts: list[str]) -> list[str]:
@@ -62,9 +73,9 @@ def generate_comments_openai(article_texts: list[str], num_shots: int = 3, model
                 {
                     "role": "system",
                     "content": create_openai_sys_prompt(
-                        "You are a professional cycling commentator expected to give comments on different articles."
+                        "You are a witty member of an online bike community, expected to give comments on different articles."
                         " Respond in the tone of someone from pinkbike.com"
-                        "Please write the funniest possible comment about the article given by the user. Be slightly grumpy. \n\n ### Examples:\n\n",
+                        "Please write the comment you think will get the most upvotes about the article given by the user. Be slightly grumpy. \n\n ### Examples:\n\n",
                         num_shots=num_shots,
                     ),
                 },
@@ -80,7 +91,7 @@ def create_openai_sys_prompt(sys_prompt_prefix: str, num_shots: int = 3) -> str:
     # Open relative path, inside the prompts folder
     with open(Path(__file__).parent / f"prompts/{num_shots}_shot_prompt_encoded.txt", "r") as f:
         few_shots = f.read()
-    few_shots = base64.b64encode(few_shots).decode("utf-8")
+    few_shots = base64.b64encode(few_shots.encode("utf-8")).decode("utf-8")
     return f"{sys_prompt_prefix}\n\n{few_shots}"
 
 
@@ -104,14 +115,19 @@ if __name__ == "__main__":
         "https://www.pinkbike.com/news/article1182.html",
     ]
     num_shots = 10
-    model_id = "gpt-3.5-turbo-0125"
+    model_id = "gpt-4o"
     for url in test_urls:
-        article = get_article_details(url)
+        print_separator()
+        article = get_article_details(url, strategy=BrowserServiceStrategy())
         title_article_text = slice_article_text(f"{article['title']} {article['article_text']}", num_words=300)
-        comment = generate_comments_openai([title_article_text], num_shots=num_shots, model_id=model_id)[0]
-        print(f"URL: {url}")
-        print(f"Title: {article['title']}")
-        print(f"Comment: {comment}")
-        print("\n\n")
-        time.sleep(1)
-    # fire.Fire()
+
+        openai_comment = generate_comments_openai([title_article_text], num_shots=num_shots, model_id=model_id)[0]
+        modal_comment = generate_comments_modal([title_article_text])[0]
+
+        print(f"{COLORS['HEADER']}URL:{COLORS['ENDC']} {url}")
+        print(f"{COLORS['BLUE']}Title:{COLORS['ENDC']} {article['title']}")
+        print(f"\n{COLORS['GREEN']}GPT ({model_id}):{COLORS['ENDC']}\n{openai_comment}")
+        print(f"\n{COLORS['RED']}Modal:{COLORS['ENDC']}\n{modal_comment}")
+        print("\n")
+
+    print_separator()

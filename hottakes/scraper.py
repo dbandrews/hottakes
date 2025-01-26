@@ -1,14 +1,55 @@
 # %%
+import base64
+import os
 import re
 import time
-import json
+from abc import ABC, abstractmethod
 
-import requests
-import pandas as pd
 import numpy as np
+import pandas as pd
+import requests
 from bs4 import BeautifulSoup
-from tqdm import tqdm
 from joblib import Parallel, delayed
+from tqdm import tqdm
+
+
+class ScraperStrategy(ABC):
+    @abstractmethod
+    def get_page_content(self, url: str) -> str:
+        pass
+
+
+class RequestsStrategy(ScraperStrategy):
+    def get_page_content(self, url: str) -> str:
+        try:
+            response = requests.get(url)
+            return response.text
+        except requests.exceptions.ConnectTimeout:
+            return ""
+
+
+class BrowserServiceStrategy(ScraperStrategy):
+    def __init__(self):
+        self.browser_service_url = os.environ.get(
+            "BROWSER_SERVICE_URL", "https://dbandrews--browser-service-browserservice-web.modal.run"
+        )
+
+    def get_auth_headers(self) -> dict:
+        if os.environ.get("MODAL_TOKEN_ID") is None or os.environ.get("MODAL_TOKEN_SECRET") is None:
+            raise Exception("MODAL_TOKEN_ID and MODAL_TOKEN_SECRET environment variables must be set")
+
+        credentials = f"{os.environ['MODAL_TOKEN_ID']}:{os.environ['MODAL_TOKEN_SECRET']}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode()
+        return {"Proxy-Authorization": f"Basic {encoded_credentials}"}
+
+    def get_page_content(self, url: str) -> str:
+        headers = self.get_auth_headers()
+        response = requests.get(f"{self.browser_service_url}/page/{url}", headers=headers)
+
+        if response.status_code != 200:
+            raise Exception(f"Failed to get page content: {response.text}")
+
+        return response.json()["content"]
 
 
 def get_article_urls(year: int, month: int, catid: int = 0):
@@ -40,54 +81,57 @@ def get_article_urls(year: int, month: int, catid: int = 0):
 
 
 # %%
-def get_article_details(url):
+def get_article_details(url: str, strategy: ScraperStrategy = None) -> dict:
+    if strategy is None:
+        strategy = RequestsStrategy()
+
     try:
-        response = requests.get(url)
-    except requests.exceptions.ConnectTimeout:
+        page_content = strategy.get_page_content(url)
+        soup = BeautifulSoup(page_content, "html.parser")
+
+        if soup.title:
+            title = soup.title.string
+        else:
+            title = "N/A"
+
+        # Find the <meta> element with name="description"
+        meta_description = soup.find("meta", attrs={"name": "description"})
+
+        # Extract the content attribute from the <meta> element
+        if meta_description:
+            description = meta_description.get("content")
+        else:
+            description = "NA"
+
+        # Find an element and extract its text using .get_text()
+        blog_section_inside = soup.find(class_="blog-section-inside")
+        if blog_section_inside is None:
+            text = "N/A"
+        else:
+            for child in blog_section_inside.find_all(class_="media-media-width"):
+                child.decompose()
+            text = blog_section_inside.get_text()
+
+        # Find the comments
+        try:
+            comment_div = soup.find("div", id="comment_wrap")
+            top_comment_div = comment_div.find(class_="ppcont")
+            top_comment_text_div = top_comment_div.find(class_="comtext")
+            top_comment = top_comment_text_div.get_text(strip=True)
+        except:
+            top_comment = "N/A"
+
+        dict = {
+            "url": url,
+            "title": str(title),
+            "description": description,
+            "article_text": text,
+            "top_comment_text": top_comment,
+        }
+        return dict
+    except Exception as e:
+        print(f"Error processing {url}: {e}")
         return {}
-
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    if soup.title:
-        title = soup.title.string
-    else:
-        title = "N/A"
-
-    # Find the <meta> element with name="description"
-    meta_description = soup.find("meta", attrs={"name": "description"})
-
-    # Extract the content attribute from the <meta> element
-    if meta_description:
-        description = meta_description.get("content")
-    else:
-        description = "NA"
-
-    # Find an element and extract its text using .get_text()
-    blog_section_inside = soup.find(class_="blog-section-inside")
-    if blog_section_inside is None:
-        text = "N/A"
-    else:
-        for child in blog_section_inside.find_all(class_="media-media-width"):
-            child.decompose()
-        text = blog_section_inside.get_text()
-
-    # Find the comments
-    try:
-        comment_div = soup.find("div", id="comment_wrap")
-        top_comment_div = comment_div.find(class_="ppcont")
-        top_comment_text_div = top_comment_div.find(class_="comtext")
-        top_comment = top_comment_text_div.get_text(strip=True)
-    except:
-        top_comment = "N/A"
-
-    dict = {
-        "url": url,
-        "title": str(title),
-        "description": description,
-        "article_text": text,
-        "top_comment_text": top_comment,
-    }
-    return dict
 
 
 # %%
@@ -142,6 +186,10 @@ if __name__ == "__main__":
     months = list(range(12, 0, -1))
     sleep_length = 0.1
 
+    # Example of using different strategies
+    requests_strategy = RequestsStrategy()
+    browser_strategy = BrowserServiceStrategy()
+
     # _______________Article Links _______________
     article_urls = []
     for year in tqdm(years, desc="Years"):
@@ -157,10 +205,10 @@ if __name__ == "__main__":
     n_jobs = 8
     url_chunks = np.array_split(article_urls, n_jobs)
 
-    def get_article_details_parallel(url_chunk, job_num, sleep_length=1):
+    def get_article_details_parallel(url_chunk, job_num, strategy=None, sleep_length=1):
         details = []
         for url in tqdm(url_chunk, desc=f"Job {job_num}", position=job_num, leave=False):
-            details.append(get_article_details(url))
+            details.append(get_article_details(url, strategy=strategy))
             time.sleep(sleep_length)
         return details
 

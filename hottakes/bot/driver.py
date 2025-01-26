@@ -1,16 +1,15 @@
+import json
 import os
-from datetime import datetime
 import time
+from datetime import datetime
 
 import pandas as pd
-import numpy as np
-from playwright.sync_api import Playwright, sync_playwright, expect
-from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
+from dotenv import load_dotenv
+from playwright.sync_api import sync_playwright
 
-from hottakes.scraper import get_article_details, get_comment_votes, get_article_urls
 from hottakes.bot.inference import generate_comments_modal
-import json
+from hottakes.scraper import get_article_details, get_article_urls, get_comment_votes
 
 # USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.81"
 # MACOS user agent
@@ -154,5 +153,5 @@ class CommentBot:
 
 if __name__ == "__main__":
     load_dotenv(".env")
-    comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"), headless=True)
+    comment_bot = CommentBot(username=os.getenv("PINKBIKE_USER"), password=os.getenv("PINKBIKE_PASS"), headless=False)
     comment_bot.run(num_comments_desired=1)

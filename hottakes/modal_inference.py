@@ -91,8 +91,8 @@ Use the article title and text below, to write the funniest possible comment abo
         prompts = [self.template.format(title_article_text=article) for article in articles.list_of_title_article_text]
 
         sampling_params = SamplingParams(
-            temperature=1.0,
-            top_p=1,
+            temperature=0.5,
+            top_p=0.7,
             max_tokens=400,
             # presence_penalty=1.15,
         )
