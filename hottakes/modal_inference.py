@@ -73,34 +73,37 @@ Use the article title and text below, to write the funniest possible comment abo
     # @method()
     # To deploy web endpoint, uncomment the following line
     @web_endpoint(method="POST")
-    def generate(self, articles: ListOfTitleArticleText) -> list[str]:
+    def generate(self, articles: ListOfTitleArticleText, temperature: float = 0.5, top_p: float = 0.7) -> dict:
         """Generate comments for a list of title + article text.
 
         Parameters
         ----------
-        list_of_title_article_text : list[str]
-            List of title + " " + article text strings.
+        articles : ListOfTitleArticleText
+            List of title + article text strings.
+        temperature : float
+            Temperature parameter for sampling.
+        top_p : float
+            Top p parameter for sampling.
 
         Returns
         -------
-        list[str]
-            Comments for each article.
+        dict
+            Dictionary containing comments and prompts.
         """
         from vllm import SamplingParams
 
         prompts = [self.template.format(title_article_text=article) for article in articles.list_of_title_article_text]
 
         sampling_params = SamplingParams(
-            temperature=0.5,
-            top_p=0.7,
+            temperature=temperature,
+            top_p=top_p,
             max_tokens=400,
-            # presence_penalty=1.15,
         )
 
         results = self.llm.generate(prompts, sampling_params)
-        results = [result.outputs[0].text for result in results]
-        print(results)
-        return results
+        comments = [result.outputs[0].text for result in results]
+
+        return {"comments": comments, "prompts": prompts}
 
     # Test locally with `modal run hottakes/modal_inference.py`
     # @app.local_entrypoint()
@@ -130,6 +133,7 @@ Use the article title and text below, to write the funniest possible comment abo
 
         start_time = time.time()
         data = {"list_of_title_article_text": [" ".join(sample["title_article_text"].split()[:300])]}
+        params = {"temperature": 0.5, "top_p": 0.7}  # Add these parameters
 
         headers = {"Content-Type": "application/json"}
 
@@ -137,9 +141,9 @@ Use the article title and text below, to write the funniest possible comment abo
             "https://dbandrews--hottakes-inference-hottakesmodel-generate.modal.run",
             json=data,
             headers=headers,
+            params=params,  # Include the parameters in the request
         )
 
         generation = response.json()
         print(f"Generation took {time.time() - start_time} seconds")
-
         print(generation)

@@ -110,7 +110,10 @@ def get_article_details(url: str, strategy: ScraperStrategy = None) -> dict:
         else:
             for child in blog_section_inside.find_all(class_="media-media-width"):
                 child.decompose()
-            text = blog_section_inside.get_text()
+            # Preserve newlines and clean up extra whitespace
+            text = blog_section_inside.get_text(separator="\n")
+            # Clean up multiple newlines while preserving paragraph structure
+            text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
         # Find the comments
         try:
