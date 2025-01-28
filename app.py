@@ -1,4 +1,5 @@
 import dash_bootstrap_components as dbc
+import modal
 from dash import Dash, Input, Output, State, callback, dcc, html
 
 from hottakes.bot.inference import (
@@ -8,6 +9,22 @@ from hottakes.bot.inference import (
     get_article_details,
     slice_article_text,
 )
+
+image = modal.Image.debian_slim(python_version="3.11").pip_install(
+    [
+        "dash==2.18.2",
+        "dash-bootstrap-components==1.7.1",
+        "openai==1.55.3",
+        "requests==2.31.0",
+        "pandas==2.2.0",
+        "tqdm==4.66.1",
+        "python-dotenv==1.0.1",
+        "joblib==1.3.2",
+        "beautifulsoup4==4.12.3",
+    ],
+    force_build=True,
+)
+app = modal.App("hottakes-ui", image=image)
 
 # Sample URLs
 SAMPLE_URLS = [
@@ -33,10 +50,10 @@ SAMPLE_URLS = [
     "https://www.pinkbike.com/news/video-jaxson-riddles-50-foot-huck-to-flat-crash.html",
 ]
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server
+dash_app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = dash_app.server
 
-app.layout = dbc.Container(
+dash_app.layout = dbc.Container(
     [
         html.H1("Hottakes Comment Generator", className="my-4"),
         dbc.Row(
@@ -294,5 +311,21 @@ def update_slider_values(gpt_temp, gpt_top_p, modal_temp, modal_top_p):
     ]
 
 
+@app.function(
+    image=image,
+    secrets=[
+        modal.Secret.from_name("openai-secret"),
+        modal.Secret.from_name("modal_webhook_tokens"),
+    ],
+    # cpu=2.0,
+    # memory=4000,
+    # mounts=[modal.Mount.from_local_python_packages("app")],
+    # allow_concurrent_inputs=10,
+)
+@modal.wsgi_app()
+def flask_app():
+    return dash_app.server
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    dash_app.run(debug=True)
