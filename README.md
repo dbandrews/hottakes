@@ -1,5 +1,8 @@
 # hottakes
 
+Experiments fine tuning an LLM with SFT and DPO on comments from [Pinkbike](www.pinkbike.com)
+
+https://dbandrews--hottakes-ui-flask-app.modal.run/
 
 ## Setup
 
