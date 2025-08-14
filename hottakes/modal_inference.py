@@ -1,7 +1,7 @@
 import os
 
 import modal
-from modal import App, Image, Secret, web_endpoint
+from modal import App, Image, Secret, fastapi_endpoint
 from pydantic import BaseModel
 
 MODEL_DIR = "/model"
@@ -72,7 +72,7 @@ Use the article title and text below, to write the funniest possible comment abo
     # For testing, executing from local terminal
     # @method()
     # To deploy web endpoint, uncomment the following line
-    @web_endpoint(method="POST")
+    @fastapi_endpoint(method="POST")
     def generate(self, articles: ListOfTitleArticleText, temperature: float = 0.5, top_p: float = 0.7) -> dict:
         """Generate comments for a list of title + article text.
 
